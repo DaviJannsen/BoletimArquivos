@@ -1,11 +1,52 @@
 package app;
 import provas.Prova;
+import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
         Prova prova = new Prova();
-        prova.criarGabarito();
-        prova.criarArquivoRespostas();
-        prova.compararRespostas();
+        Scanner sc = new Scanner(System.in);
+        int opc;
+
+        do{
+            System.out.println("\n---- SISTEMA DE PROVAS ----");
+            System.out.println("1 - Criar Gabarito");
+            System.out.println("2 - Registrar Respostas de Alunos");
+            System.out.println("3 - Corrigir Provas");
+            System.out.println("4 - Exibir Resultado");
+            System.out.println("0 - Sair");
+            System.out.print("Escolha uma opção: ");
+
+            while (!sc.hasNextInt()) {
+                System.out.print("Opção inválida. Tente novamente: ");
+                sc.next();
+            }
+
+            opc = sc.nextInt();
+            sc.nextLine(); 
+
+            switch (opc) {
+                case 1:
+                    prova.criarGabarito();
+                    break;
+                case 2:
+                    prova.criarArquivoRespostas();
+                    break;
+                case 3:
+                    prova.compararRespostas();
+                    break;
+                case 4:
+                    prova.exibirResultados();
+                    break;    
+                case 0:
+                    System.out.println("Encerrando . . . ");
+                    break;
+                default:
+                    System.out.println("Opção inválida. Escolha entre 0 e 3.");
+            }
+
+        } while (opc != 0);
+
+        sc.close();
     }
 }
