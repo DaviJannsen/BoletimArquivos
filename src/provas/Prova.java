@@ -9,15 +9,15 @@ public class Prova {
     private final Scanner scanner = new Scanner(System.in);
     private String disciplina;
     private List<Aluno> alunos = new ArrayList<>();
-
-    public void criarArquivoRespostas() {
+    
+    public void criarRespostas() {
         System.out.print("Digite o nome da disciplina: ");
         disciplina = scanner.nextLine();
 
         try {
             FileWriter fw = new FileWriter(disciplina + ".txt", true);
             BufferedWriter bw = new BufferedWriter(fw);
-            while(true){
+            while (true) {
                 System.out.print("Digite o nome do aluno: ");
                 String nome = scanner.nextLine().toUpperCase();
 
@@ -33,7 +33,7 @@ public class Prova {
                 bw.newLine();
 
                 String continuar;
-                do{
+                do {
                     System.out.print("Deseja adicionar outro aluno? (S/N): ");
                     continuar = scanner.nextLine().trim().toUpperCase();
                     if (!continuar.equals("S") && !continuar.equals("N")) {
@@ -80,55 +80,141 @@ public class Prova {
         }
     }
 
-    public void compararRespostas(){
+    public void compararRespostas() {
         System.out.print("Digite o nome da disciplina para corrigir: ");
         disciplina = scanner.nextLine().trim();
 
         String arquivoGabarito = disciplina + "_gabarito.txt";
         String arquivoRespostas = disciplina + ".txt";
         String arquivoResultado = disciplina + "_resultado.txt";
-            try {
-                BufferedReader brGabarito = new BufferedReader(new FileReader(arquivoGabarito));
-                BufferedReader brRespostas = new BufferedReader(new FileReader(arquivoRespostas));
-                BufferedWriter bwResultado = new BufferedWriter(new FileWriter(arquivoResultado));
+        try {
+            BufferedReader brGabarito = new BufferedReader(new FileReader(arquivoGabarito));
+            BufferedReader brRespostas = new BufferedReader(new FileReader(arquivoRespostas));
+            BufferedWriter bwResultado = new BufferedWriter(new FileWriter(arquivoResultado));
 
-                String linhaGabarito = brGabarito.readLine();
-                String[] gabarito = linhaGabarito.trim().split("");
-                brGabarito.close();
+            String linhaGabarito = brGabarito.readLine();
+            String[] gabarito = linhaGabarito.trim().split("");
+            brGabarito.close();
 
-                String linha;
-                while ((linha = brRespostas.readLine()) != null) {
-                    String[] partes = linha.split("\t");
-                    if (partes.length != 2){
-                        continue;
-                    }    
-                    String[] respostasAluno = partes[0].split("");
-                    String nome = partes[1];
+            String linha;
+            while ((linha = brRespostas.readLine()) != null) {
+                String[] partes = linha.split("\t");
+                if (partes.length != 2) {
+                    continue;
+                }
+                String[] respostasAluno = partes[0].split("");
+                String nome = partes[1];
 
-                    int pontuacao = 0;
-                    for (int i = 0; i < gabarito.length && i < respostasAluno.length; i++) {
-                        if (gabarito[i].equalsIgnoreCase(respostasAluno[i])) {
-                            pontuacao++;
-                        }
-                    }
-                    if (respostasIguais(respostasAluno)) {
-                        pontuacao = 0;
-                        bwResultado.write(nome + ": " + pontuacao + (" (todas respostas iguais)"));
-                    } else {
-                    bwResultado.write(nome + ": " + pontuacao + " pontos");
-                    bwResultado.newLine();
+                int pontuacao = 0;
+                for (int i = 0; i < gabarito.length && i < respostasAluno.length; i++) {
+                    if (gabarito[i].equalsIgnoreCase(respostasAluno[i])) {
+                        pontuacao++;
                     }
                 }
+                if (respostasIguais(respostasAluno)) {
+                    pontuacao = 0;
+                    bwResultado.write(nome + ": " + pontuacao + (" (todas respostas iguais)"));
+                    bwResultado.newLine();
+                } else {
+                    bwResultado.write(nome + ": " + pontuacao + " pontos");
+                    bwResultado.newLine();
+                }
+            }
 
-        brRespostas.close();
-        bwResultado.close();
+            brRespostas.close();
+            bwResultado.close();
 
-        System.out.println("Correção concluída. Resultados salvos em " + disciplina + "_resultado.txt");
+            System.out.println("Correção concluída. Resultados salvos em " + disciplina + "_resultado.txt");
+            arquivoOrdemNome();
+            arquivoNotaEMedia();
 
-    } catch (IOException e) {
-        System.out.println("Erro ao corrigir provas: " + e.getMessage());
+        } catch (IOException e) {
+            System.out.println("Erro ao corrigir provas: " + e.getMessage());
+        }
     }
-}
+
+    private void arquivoOrdemNome() {
+        String arquivoResultado = disciplina + "_resultado.txt";
+        String arquivoPorNome = disciplina + "_alfabetica.txt";
+
+        List<String> nomes = new ArrayList<>();
+        List<Integer> notas = new ArrayList<>();
+
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(arquivoResultado));
+            String linha;
+
+            while ((linha = br.readLine()) != null) {
+                if (!linha.contains(":")) {
+                    continue;
+                }
+                String[] partes = linha.split(":");
+                String nome = partes[0].trim();
+                String pontos = partes[1].trim().split(" ")[0];
+
+                nomes.add(nome);
+                notas.add(Integer.parseInt(pontos));
+            }
+            br.close();
+
+            List<Integer> indicesPorNome = ordenarIndicesPorNome(nomes);
+            BufferedWriter bwNome = new BufferedWriter(new FileWriter(arquivoPorNome));
+            for (int i : indicesPorNome) {
+                bwNome.write(nomes.get(i) + ": " + notas.get(i) + " pontos");
+                bwNome.newLine();
+            }
+            bwNome.close();
+
+        } catch (IOException e) {
+            System.out.println("Erro ao gerar arquivo por nome: " + e.getMessage());
+        }
+    }
+
+    private void arquivoNotaEMedia() {
+        String arquivoResultado = disciplina + "_resultado.txt";
+        String arquivoPorNota = disciplina + "_nota.txt";
+
+        List<String> nomes = new ArrayList<>();
+        List<Integer> notas = new ArrayList<>();
+
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(arquivoResultado));
+            String linha;
+
+            while ((linha = br.readLine()) != null) {
+                if (!linha.contains(":"))
+                    continue;
+                String[] partes = linha.split(":");
+                String nome = partes[0].trim();
+                String pontos = partes[1].replaceAll("\\D", "").trim(); // o mesmo que usar [^0-9)
+
+                nomes.add(nome);
+                notas.add(Integer.parseInt(pontos));
+            }
+            br.close();
+
+            List<Integer> indicesPorNota = ordenarIndicesPorNota(notas);
+            BufferedWriter bwNota = new BufferedWriter(new FileWriter(arquivoPorNota));
+            double soma = 0;
+
+            for (int i : indicesPorNota) {
+                bwNota.write(nomes.get(i) + ": " + notas.get(i) + " pontos");
+                bwNota.newLine();
+                soma += notas.get(i);
+            }
+            double media;
+            if(notas.isEmpty()){
+                media = 0;
+            } else {
+                media = soma /notas.size();
+            }
+            bwNota.write("MÉDIA DA TURMA: " + String.format("%.2f", media));
+            bwNota.close();
+
+        } catch (IOException e) {
+            System.out.println("Erro ao gerar arquivo por nota: " + e.getMessage());
+        }
+    }
 
     private String lerResposta(String prompt) {
         String resposta;
@@ -176,6 +262,82 @@ public class Prova {
         }
 
         System.out.println("----------------------------------\n");
+    }
+
+    private List<Integer> ordenarIndicesPorNome(List<String> nomes) {
+        List<Integer> indices = new ArrayList<>();
+        for (int i = 0; i < nomes.size(); i++)
+            indices.add(i);
+        {
+            indices.sort((i1, i2) -> nomes.get(i1).compareTo(nomes.get(i2)));
+            return indices;
         }
+    }
+
+    private List<Integer> ordenarIndicesPorNota(List<Integer> notas) {
+        List<Integer> indices = new ArrayList<>();
+        for (int i = 0; i < notas.size(); i++)
+            indices.add(i);
+        {
+            indices.sort((i1, i2) -> notas.get(i2) - notas.get(i1));
+            return indices;
+        }
+    }
+
+    public void exibirResultadosOrdenadosPorNome() {
+        System.out.print("Digite o nome da disciplina para exibir os resultados por nome: ");
+        disciplina = scanner.nextLine().trim();
+
+        String arquivo = disciplina + "_alfabetica.txt";
+        File resultado = new File(arquivo);
+
+        if (!resultado.exists()) {
+            System.out
+                    .println("Arquivo de resultado por nome não encontrado para a disciplina \"" + disciplina + "\".");
+            return;
+        }
+
+        System.out.println("\nRESULTADOS ORDENADOS POR NOME - " + disciplina.toUpperCase());
+        System.out.println("----------------------------------");
+
+        try (BufferedReader br = new BufferedReader(new FileReader(resultado))) {
+            String linha;
+            while ((linha = br.readLine()) != null) {
+                System.out.println(linha);
+            }
+        } catch (IOException e) {
+            System.err.println("Erro ao ler o arquivo de resultados: " + e.getMessage());
+        }
+
+        System.out.println("----------------------------------\n");
+    }
+
+    public void exibirResultadosPorNota() {
+        System.out.print("Digite o nome da disciplina para exibir os resultados por nota: ");
+        disciplina = scanner.nextLine().trim();
+
+        String arquivo = disciplina + "_nota.txt";
+        File resultado = new File(arquivo);
+
+        if (!resultado.exists()) {
+            System.out
+                    .println("Arquivo de resultado por nota não encontrado para a disciplina \"" + disciplina + "\".");
+            return;
+        }
+
+        System.out.println("\nRESULTADOS POR NOTA (DECRESCENTE) - " + disciplina.toUpperCase());
+        System.out.println("----------------------------------");
+
+        try (BufferedReader br = new BufferedReader(new FileReader(resultado))) {
+            String linha;
+            while ((linha = br.readLine()) != null) {
+                System.out.println(linha);
+            }
+        } catch (IOException e) {
+            System.err.println("Erro ao ler o arquivo de resultados: " + e.getMessage());
+        }
+
+        System.out.println("----------------------------------\n");
+    }
 
 }
