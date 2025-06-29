@@ -325,7 +325,7 @@ public class Prova {
             return;
         }
 
-        System.out.println("\nRESULTADOS POR NOTA (DECRESCENTE) - " + disciplina.toUpperCase());
+        System.out.println("\nRESULTADOS POR NOTA - " + disciplina.toUpperCase());
         System.out.println("----------------------------------");
 
         try (BufferedReader br = new BufferedReader(new FileReader(resultado))) {
