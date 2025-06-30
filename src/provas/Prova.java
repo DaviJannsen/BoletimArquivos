@@ -9,7 +9,7 @@ public class Prova {
     private final Scanner scanner = new Scanner(System.in);
     private String disciplina;
     private List<Aluno> alunos = new ArrayList<>();
-    
+
     public void criarRespostas() {
         System.out.print("Digite o nome da disciplina: ");
         disciplina = scanner.nextLine();
@@ -65,6 +65,10 @@ public class Prova {
         for (int i = 0; i < 10; i++) {
             gabarito[i] = lerResposta("Resposta correta da questão " + (i + 1));
         }
+        if (respostasIguais(gabarito)) {
+            System.out.println("Gabarito inválido: todas as respostas são iguais.");
+            return;
+        }
         try {
             FileWriter fw = new FileWriter(disciplina + "_gabarito.txt");
             BufferedWriter bw = new BufferedWriter(fw);
@@ -105,18 +109,16 @@ public class Prova {
                 String[] respostasAluno = partes[0].split("");
                 String nome = partes[1];
 
-                int pontuacao = 0;
-                for (int i = 0; i < gabarito.length && i < respostasAluno.length; i++) {
-                    if (gabarito[i].equalsIgnoreCase(respostasAluno[i])) {
-                        pontuacao++;
-                    }
-                }
-                if (respostasIguais(respostasAluno)) {
-                    pontuacao = 0;
-                    bwResultado.write(nome + ": " + pontuacao + (" (todas respostas iguais)"));
+                Aluno aluno = new Aluno(nome, respostasAluno);
+
+                aluno.calcularPontuacao(gabarito);
+                int pontuacao = aluno.getPontuacao();
+
+                if (aluno.respostasIguais()) {
+                    bwResultado.write(aluno.getNome() + ": " + pontuacao + (" (todas respostas iguais)"));
                     bwResultado.newLine();
                 } else {
-                    bwResultado.write(nome + ": " + pontuacao + " pontos");
+                    bwResultado.write(aluno.getNome() + ": " + pontuacao + " pontos");
                     bwResultado.newLine();
                 }
             }
@@ -137,8 +139,7 @@ public class Prova {
         String arquivoResultado = disciplina + "_resultado.txt";
         String arquivoPorNome = disciplina + "_alfabetica.txt";
 
-        List<String> nomes = new ArrayList<>();
-        List<Integer> notas = new ArrayList<>();
+        List<Aluno> alunos = new ArrayList<>();
 
         try {
             BufferedReader br = new BufferedReader(new FileReader(arquivoResultado));
@@ -150,17 +151,22 @@ public class Prova {
                 }
                 String[] partes = linha.split(":");
                 String nome = partes[0].trim();
-                String pontos = partes[1].trim().split(" ")[0];
+                String pontosStr = partes[1].replaceAll("\\D", "").trim(); // equivalente ao [^0-9]
+                int pontos;
+                if (pontosStr.isEmpty()) {
+                    pontos = 0;
+                } else {
+                    pontos = Integer.parseInt(pontosStr);
+                }
 
-                nomes.add(nome);
-                notas.add(Integer.parseInt(pontos));
+                alunos.add(new Aluno(nome, null, pontos));
             }
             br.close();
 
-            List<Integer> indicesPorNome = ordenarIndicesPorNome(nomes);
+            alunos.sort(Comparator.comparing(Aluno::getNome));
             BufferedWriter bwNome = new BufferedWriter(new FileWriter(arquivoPorNome));
-            for (int i : indicesPorNome) {
-                bwNome.write(nomes.get(i) + ": " + notas.get(i) + " pontos");
+            for (Aluno aluno : alunos) {
+                bwNome.write(aluno.getNome() + ": " + aluno.getPontuacao() + " pontos");
                 bwNome.newLine();
             }
             bwNome.close();
@@ -174,40 +180,38 @@ public class Prova {
         String arquivoResultado = disciplina + "_resultado.txt";
         String arquivoPorNota = disciplina + "_nota.txt";
 
-        List<String> nomes = new ArrayList<>();
-        List<Integer> notas = new ArrayList<>();
+        List<Aluno> alunos = new ArrayList<>();
 
         try {
             BufferedReader br = new BufferedReader(new FileReader(arquivoResultado));
             String linha;
 
             while ((linha = br.readLine()) != null) {
-                if (!linha.contains(":"))
-                    continue;
                 String[] partes = linha.split(":");
                 String nome = partes[0].trim();
-                String pontos = partes[1].replaceAll("\\D", "").trim(); // o mesmo que usar [^0-9)
+                String pontosStr = partes[1].replaceAll("\\D", "").trim();
+                int pontos;
+                if (pontosStr.isEmpty()) {
+                    pontos = 0;
+                } else {
+                    pontos = Integer.parseInt(pontosStr);
+                }
 
-                nomes.add(nome);
-                notas.add(Integer.parseInt(pontos));
+                alunos.add(new Aluno(nome, null, pontos));
             }
             br.close();
 
-            List<Integer> indicesPorNota = ordenarIndicesPorNota(notas);
+            alunos.sort((a1, a2) -> Integer.compare(a2.getPontuacao(), a1.getPontuacao()));
             BufferedWriter bwNota = new BufferedWriter(new FileWriter(arquivoPorNota));
             double soma = 0;
 
-            for (int i : indicesPorNota) {
-                bwNota.write(nomes.get(i) + ": " + notas.get(i) + " pontos");
+            for (Aluno aluno : alunos) {
+                bwNota.write(aluno.getNome() + ": " + aluno.getPontuacao() + " pontos");
                 bwNota.newLine();
-                soma += notas.get(i);
+                soma += aluno.getPontuacao();
             }
-            double media;
-            if(notas.isEmpty()){
-                media = 0;
-            } else {
-                media = soma /notas.size();
-            }
+
+            double media = soma / alunos.size();
             bwNota.write("MÉDIA DA TURMA: " + String.format("%.2f", media));
             bwNota.close();
 
@@ -229,8 +233,8 @@ public class Prova {
     }
 
     private boolean respostasIguais(String[] respostas) {
-        for (String r : respostas) {
-            if (!r.equalsIgnoreCase(respostas[0])) {
+        for (String resposta : respostas) {
+            if (!resposta.equals(respostas[0])) {
                 return false;
             }
         }
@@ -262,26 +266,6 @@ public class Prova {
         }
 
         System.out.println("----------------------------------\n");
-    }
-
-    private List<Integer> ordenarIndicesPorNome(List<String> nomes) {
-        List<Integer> indices = new ArrayList<>();
-        for (int i = 0; i < nomes.size(); i++)
-            indices.add(i);
-        {
-            indices.sort((i1, i2) -> nomes.get(i1).compareTo(nomes.get(i2)));
-            return indices;
-        }
-    }
-
-    private List<Integer> ordenarIndicesPorNota(List<Integer> notas) {
-        List<Integer> indices = new ArrayList<>();
-        for (int i = 0; i < notas.size(); i++)
-            indices.add(i);
-        {
-            indices.sort((i1, i2) -> notas.get(i2) - notas.get(i1));
-            return indices;
-        }
     }
 
     public void exibirResultadosOrdenadosPorNome() {
@@ -339,5 +323,4 @@ public class Prova {
 
         System.out.println("----------------------------------\n");
     }
-
 }
